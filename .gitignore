@@ -33,3 +33,7 @@ node_modules/
 # Build output
 dist/
 build/
+
+.vs/
+bin/
+obj/
