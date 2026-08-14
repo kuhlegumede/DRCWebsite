@@ -1,4 +1,4 @@
-name: Build and deploy React frontend to Azure
+name: Build and deploy React frontend to Azure - Production
 
 on:
   push:
