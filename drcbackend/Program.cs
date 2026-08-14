@@ -53,9 +53,9 @@ builder.Services.AddCors(options =>
                 "https://localhost:5173",
                 "http://localhost:5174",
                 "https://localhost:5174"
-                "https://drc-primary-school-api-hjddghe3hpd2cvgf.southafricanorth-01.azurewebsites.net"
             )
-            .AllowAnyHeader();
+            .AllowAnyHeader()
+            .AllowAnyMethod();
     });
 });
 
