@@ -1,0 +1,62 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'Manrope', sans-serif;
+  background-color: #FAF7F1;
+  color: #15130F;
+}
+
+::selection {
+  background-color: #F2B705;
+  color: #15130F;
+}
+
+/* Visible keyboard focus everywhere */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 3px solid #E8720C;
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.triangle-trim {
+  height: 16px;
+  width: 100%;
+  background:
+    linear-gradient(135deg, #15130F 25%, transparent 25%) 0 0,
+    linear-gradient(225deg, #15130F 25%, transparent 25%) 0 0,
+    linear-gradient(315deg, #15130F 25%, transparent 25%) 0 0,
+    linear-gradient(45deg, #15130F 25%, transparent 25%) 0 0;
+  background-size: 16px 16px;
+  background-color: #E8720C;
+}
+
+.triangle-trim--gold {
+  background-color: #F2B705;
+}
+
+.triangle-trim--sm {
+  height: 10px;
+  background-size: 10px 10px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.font-display { font-family: 'Fraunces', serif; }
+.font-mono { font-family: 'IBM Plex Mono', monospace; }

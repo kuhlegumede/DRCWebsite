@@ -1,0 +1,35 @@
+# Backend (ASP.NET Core)
+drcbackend/bin/
+drcbackend/obj/
+drcbackend/.vs/
+drcbackend/*.user
+drcbackend/*.suo
+
+# Environment / secrets
+.env
+.env.*
+.env.local
+.env.*.local
+appsettings.Development.json
+appsettings.Local.json
+appsettings.*.local.json
+
+# Frontend (add these once frontend folder exists)
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+frontend/.vite/
+
+# Shared
+*.log
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/

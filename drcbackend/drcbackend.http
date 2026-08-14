@@ -1,0 +1,5 @@
+@drcbackend_HostAddress = http://localhost:5085
+
+GET {{drcbackend_HostAddress}}/weatherforecast/
+Accept: application/json
+

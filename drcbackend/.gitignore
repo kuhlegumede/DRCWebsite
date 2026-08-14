@@ -1,0 +1,46 @@
+﻿# Build results
+bin/
+obj/
+out/
+
+# .NET / Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Environment / secrets
+.env
+.env.*
+appsettings.Development.json
+appsettings.Local.json
+appsettings.*.local.json
+secrets.json
+
+# Publish artifacts
+publish/
+*.pubxml
+*.pubxml.user
+
+# Logs
+logs/
+*.log
+
+# Database files
+*.mdf
+*.ldf
+*.db
+*.sqlite
+
+# Rider / JetBrains
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# NuGet
+*.nupkg
+**/packages/*
+!**/packages/build/
