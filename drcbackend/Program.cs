@@ -45,15 +45,10 @@ builder.Services.Configure<SmtpSettings>(builder.Configuration.GetSection("SmtpS
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowFrontend", policy =>
+    options.AddPolicy("Frontend", policy =>
     {
         policy
-            .WithOrigins(
-                "http://localhost:5173",
-                "https://localhost:5173",
-                "http://localhost:5174",
-                "https://localhost:5174"
-            )
+            .WithOrigins("https://drc-primary-school-frontend-ftbmgxctfwendgdd.southafricanorth-01.azurewebsites.net")
             .AllowAnyHeader()
             .AllowAnyMethod();
     });
@@ -143,7 +138,7 @@ if (
     app.UseHttpsRedirection();
 }*/
 
-app.UseCors("AllowFrontend");
+app.UseCors("Frontend");
 
 app.MapGet("/", () => Results.Ok(new
 {
