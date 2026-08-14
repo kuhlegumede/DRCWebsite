@@ -29,6 +29,8 @@ jobs:
 
       - name: Build React app
         working-directory: frontend
+        env:
+         VITE_API_BASE_URL: https://drc-primary-school-api-hjddghe3hpd2cvgf.southafricanorth-01.azurewebsites.net
         run: npm run build
 
       - name: Deploy to Azure Web App
