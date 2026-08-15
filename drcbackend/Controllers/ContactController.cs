@@ -30,6 +30,13 @@ namespace drcbackend.Controllers
             }
             try
             {
+                Console.WriteLine("=== CONTACT REQUEST STARTED ===");
+                Console.WriteLine($"Name: {message.Name}");
+                Console.WriteLine($"Email: {message.Email}");
+
+                // Your existing contact logic here
+
+                Console.WriteLine("=== CONTACT REQUEST COMPLETED ===")
                 await _emailService.SendContactEmailAsync(request);
                 return Ok(new
                 {
@@ -38,6 +45,8 @@ namespace drcbackend.Controllers
             }
             catch (Exception ex)
             {
+                Console.WriteLine("=== CONTACT REQUEST FAILED ===");
+                Console.WriteLine(ex.ToString());
                 return StatusCode(500, new { message = "Failed to send message." , error = ex.Message});
             }    
         }
