@@ -13,3 +13,6 @@ Also install MlKit (Mail Kit).
 A relational database is used to store events.
 
 In development, connect the backEnd to the frontEnd via API.
+
+##License
+Created by Kuhle Gumede.
