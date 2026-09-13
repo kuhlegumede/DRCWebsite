@@ -46,11 +46,10 @@ builder.Services.Configure<SmtpSettings>(builder.Configuration.GetSection("SmtpS
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("Frontend", policy =>
+    options.AddPolicy("AllowFrontend", policy =>
     {
         policy
-            .WithOrigins("https://drc-primary-school-frontend-ftbmgxctfwendgdd.southafricanorth-01.azurewebsites.net",
-            "http://localhost:5173")
+            .WithOrigins("https://drcprimaryschool.co.za", "https://www.drcprimaryschool.co.za")
             .AllowAnyHeader()
             .AllowAnyMethod();
     });
@@ -106,6 +105,8 @@ builder.Services.AddSwaggerGen(options =>
 
 var app = builder.Build();
 
+app.UseStaticFiles();
+
 // PASSWORD HASH UTILITY
 
 if (
@@ -135,12 +136,10 @@ if (
 
 // HTTP PIPELINE
 
-/*if(!app.Environment.IsDevelopment())
-{
-    app.UseHttpsRedirection();
-}*/
+app.UseHttpsRedirection();
 
-app.UseCors("Frontend");
+
+app.UseCors("AllowFrontend");
 
 app.MapGet("/", () => Results.Ok(new
 {
