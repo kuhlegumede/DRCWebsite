@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 
 class ApiError extends Error {
   constructor(message, status) {
@@ -9,14 +9,24 @@ class ApiError extends Error {
 
 async function request(path, { method = "GET", body, token } = {}) {
   let response;
+
+  // Determine if body is FormData (e.g., file uploads) vs standard JSON
+  const isFormData = typeof FormData !== "undefined" && body instanceof FormData;
+
+  const headers = {
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+
+  // Do NOT set Content-Type for FormData; browser must set multipart boundary automatically
+  if (!isFormData) {
+    headers["Content-Type"] = "application/json";
+  }
+
   try {
     response = await fetch(`${API_BASE_URL}${path}`, {
       method,
-      headers: {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      body: body ? JSON.stringify(body) : undefined,
+      headers,
+      body: isFormData ? body : body ? JSON.stringify(body) : undefined,
     });
   } catch {
     throw new ApiError(
@@ -31,24 +41,38 @@ async function request(path, { method = "GET", body, token } = {}) {
   try {
     data = await response.json();
   } catch {
-    // no JSON body — fine for some responses
+    // no JSON body
   }
 
   if (!response.ok) {
-    throw new ApiError(data?.message || "Something went wrong. Please try again.", response.status);
+    throw new ApiError(
+      data?.message || "Something went wrong. Please try again.",
+      response.status
+    );
   }
 
   return data;
 }
 
 export const api = {
+  // Events API
   getEvents: () => request("/api/events"),
   createEvent: (event, token) =>
     request("/api/events", { method: "POST", body: event, token }),
   deleteEvent: (id, token) =>
     request(`/api/events/${id}`, { method: "DELETE", token }),
+
+  // Auth API
   login: (password) =>
     request("/api/auth/login", { method: "POST", body: { password } }),
+
+  // News API
+  getNews: () => request("/api/news"),
+  getNewsById: (id) => request(`/api/news/${id}`),
+  createNews: (formData, token) =>
+    request("/api/news", { method: "POST", body: formData, token }),
+  deleteNews: (id, token) =>
+    request(`/api/news/${id}`, { method: "DELETE", token }),
 };
 
 export { ApiError };

@@ -10,6 +10,8 @@ import Events from "./pages/Events";
 import Gallery from "./pages/Gallery";
 import Contact from "./pages/Contact";
 import NotFound from "./pages/NotFound";
+import News from "./pages/News";
+import { NewsProvider } from "./context/NewsContext";
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -29,7 +31,9 @@ function Layout() {
           <Route path="/about" element={<About />} />
           <Route path="/events" element={<Events />} />
           <Route path="/gallery" element={<Gallery />} />
-          <Route path="/contact" element={<Contact />} />
+          <Route path="/contact" element={<Contact />}
+           />
+          <Route path="/news" element={<News />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
@@ -43,8 +47,10 @@ export default function App() {
     <BrowserRouter>
       <AdminProvider>
         <EventsProvider>
+          <NewsProvider>
           <ScrollToTop />
           <Layout />
+       </NewsProvider>
         </EventsProvider>
       </AdminProvider>
     </BrowserRouter>

@@ -25,6 +25,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 // REPOSITORIES
 builder.Services.AddScoped<IEventRepository, EventRepository>();
+builder.Services.AddScoped<INewsRepository, NewsRepository>();
 
 // SERVICES
 
@@ -48,7 +49,8 @@ builder.Services.AddCors(options =>
     options.AddPolicy("Frontend", policy =>
     {
         policy
-            .WithOrigins("https://drc-primary-school-frontend-ftbmgxctfwendgdd.southafricanorth-01.azurewebsites.net")
+            .WithOrigins("https://drc-primary-school-frontend-ftbmgxctfwendgdd.southafricanorth-01.azurewebsites.net",
+            "http://localhost:5173")
             .AllowAnyHeader()
             .AllowAnyMethod();
     });

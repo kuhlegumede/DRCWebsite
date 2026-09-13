@@ -12,6 +12,8 @@ public class ApplicationDbContext : DbContext
     }
 
     public DbSet<EventItem> Events => Set<EventItem>();
+    public DbSet<NewsPost> NewsPosts => Set<NewsPost>();
+    public DbSet<NewsImage> NewsImages => Set<NewsImage>();
 
     protected override void OnModelCreating(
         ModelBuilder modelBuilder)
@@ -46,6 +48,51 @@ public class ApplicationDbContext : DbContext
 
             entity.Property(e => e.CreatedAtUtc)
                 .IsRequired();
+        });
+
+        modelBuilder.Entity<NewsPost>(entity =>
+        {
+            entity.ToTable("NewsPosts");
+
+            entity.HasKey(np => np.Id);
+
+            entity.Property(np => np.Id)
+                .ValueGeneratedOnAdd();
+
+            entity.Property(np => np.Title)
+                .IsRequired()
+                .HasMaxLength(200);
+
+            entity.Property(np => np.Content)
+                .IsRequired();
+
+            entity.Property(np => np.PublishedAtUtc)
+                .IsRequired();
+
+            entity.Property(np => np.CreatedAtUtc)
+                .IsRequired();
+
+            entity.HasMany(np => np.Images)
+                .WithOne(ni => ni.NewsPost)
+                .HasForeignKey(ni => ni.NewsPostId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<NewsImage>(entity =>
+        {
+            entity.ToTable("NewsImages");
+
+            entity.HasKey(ni => ni.Id);
+
+            entity.Property(ni => ni.Id)
+                .ValueGeneratedOnAdd();
+
+            entity.Property(ni => ni.ImageUrl)
+                .IsRequired()
+                .HasMaxLength(1000);
+
+            entity.Property(ni => ni.Caption)
+                .HasMaxLength(500);
         });
     }
 }

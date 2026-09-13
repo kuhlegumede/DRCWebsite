@@ -7,6 +7,7 @@ import { SCHOOL } from "../data/schoolInfo";
 const links = [
   { to: "/", label: "Home", end: true },
   { to: "/about", label: "About & Vision" },
+  {to:"/news", label: "News & Updates"},
   { to: "/gallery", label: "Gallery" },
   { to: "/contact", label: "Contact" },
 ];
