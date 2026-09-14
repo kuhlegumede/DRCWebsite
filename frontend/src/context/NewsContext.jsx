@@ -24,8 +24,8 @@ export function NewsProvider({ children }) {
 
     try {
       const data = await api.getNews();
-
-      setNews(data || []);
+      // Ensure state is always an array
+      setNews(Array.isArray(data) ? data : []);
     } catch (err) {
       setError(
         err.message ||
@@ -42,13 +42,11 @@ export function NewsProvider({ children }) {
 
   async function addNews(formData) {
     await api.createNews(formData, token);
-
     await refresh();
   }
 
   async function deleteNews(id) {
     await api.deleteNews(id, token);
-
     await refresh();
   }
 
@@ -72,9 +70,7 @@ export function useNews() {
   const context = useContext(NewsContext);
 
   if (!context) {
-    throw new Error(
-      "useNews must be used within NewsProvider"
-    );
+    throw new Error("useNews must be used within NewsProvider");
   }
 
   return context;
