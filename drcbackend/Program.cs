@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;
 using Microsoft.OpenApi.Models;
 using Microsoft.AspNetCore.Server.IIS;
+using Microsoft.Extensions.FileProviders;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -123,9 +124,18 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 var app = builder.Build();
+var webRootPath = Path.Combine(
+    app.Environment.ContentRootPath,
+    "wwwroot"
+);
 
+Directory.CreateDirectory(webRootPath);
 
-app.UseStaticFiles();
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(webRootPath),
+    RequestPath = ""
+});
 
 app.UseSwagger();
 app.UseSwaggerUI();
