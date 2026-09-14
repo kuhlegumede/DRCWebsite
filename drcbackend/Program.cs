@@ -127,11 +127,6 @@ var app = builder.Build();
 // Apply any pending EF Core migrations automatically on startup.
 // This ensures tables like NewsPosts/NewsImages exist in production
 // even if `dotnet ef database update` was never run against Azure SQL.
-using (var scope = app.Services.CreateScope())
-{
-    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    db.Database.Migrate();
-}
 
 // Ensure wwwroot exists before serving static files.
 // This is important for uploaded News images on Azure App Service.
