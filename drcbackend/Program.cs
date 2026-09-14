@@ -1,6 +1,7 @@
 using drcbackend.Repository;
 using drcbackend.Service;
 using DrcPrimarySchool.Api.Data;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;
 using Microsoft.OpenApi.Models;
@@ -24,23 +25,33 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 );
 
 // REPOSITORIES
+
 builder.Services.AddScoped<IEventRepository, EventRepository>();
 builder.Services.AddScoped<INewsRepository, NewsRepository>();
 
 // SERVICES
 
 builder.Services.AddSingleton<IPasswordHasher, Pbkdf2PasswordHasher>();
-
 builder.Services.AddSingleton<ITokenService, TokenService>();
-
 builder.Services.AddSingleton<IAdminAuthService, AdminAuthService>();
-
 builder.Services.AddScoped<EmailService>();
 
 // CONTROLLERS
 
 builder.Services.AddControllers();
-builder.Services.Configure<SmtpSettings>(builder.Configuration.GetSection("SmtpSettings"));
+
+builder.Services
+    .AddAuthentication("AdminScheme")
+    .AddScheme<AuthenticationSchemeOptions, AdminAuthenticationHandler>(
+        "AdminScheme",
+        options => { }
+    );
+
+builder.Services.AddAuthorization();
+
+builder.Services.Configure<SmtpSettings>(
+    builder.Configuration.GetSection("SmtpSettings")
+);
 
 // CORS
 
@@ -49,7 +60,10 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowFrontend", policy =>
     {
         policy
-            .WithOrigins("https://drcprimaryschool.co.za", "https://www.drcprimaryschool.co.za")
+            .WithOrigins(
+                "https://drcprimaryschool.co.za",
+                "https://www.drcprimaryschool.co.za"
+            )
             .AllowAnyHeader()
             .AllowAnyMethod();
     });
@@ -67,7 +81,8 @@ builder.Services.AddSwaggerGen(options =>
         {
             Title = "DRC Primary School API",
             Version = "v1",
-            Description = "Backend API for the DRC Primary School website."
+            Description =
+                "Backend API for the DRC Primary School website."
         }
     );
 
@@ -107,39 +122,16 @@ var app = builder.Build();
 
 app.UseStaticFiles();
 
-// PASSWORD HASH UTILITY
-
-if (
-    args.Length == 2 &&
-    args[0].Equals(
-        "hash-password",
-        StringComparison.OrdinalIgnoreCase
-    )
-)
-{
-    var hasher = new Pbkdf2PasswordHasher();
-
-    Console.WriteLine();
-    Console.WriteLine("Generated password hash:");
-    Console.WriteLine();
-    Console.WriteLine(hasher.Hash(args[1]));
-    Console.WriteLine();
-
-    return;
-}
-
-// SWAGGER
-
-    app.UseSwagger();
-
-    app.UseSwaggerUI();
-
-// HTTP PIPELINE
+app.UseSwagger();
+app.UseSwaggerUI();
 
 app.UseHttpsRedirection();
 
-
 app.UseCors("AllowFrontend");
+
+app.UseAuthentication();
+
+app.UseAuthorization();
 
 app.MapGet("/", () => Results.Ok(new
 {
