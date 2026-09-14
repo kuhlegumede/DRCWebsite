@@ -35,37 +35,67 @@ namespace drcbackend.Controllers
         // GET ALL NEWS - PUBLIC
         // =========================================================
         [HttpGet]
-        [AllowAnonymous]
-        public async Task<IActionResult> GetNews()
-        {
-            var news = await _repository.GetAllAsync();
+[AllowAnonymous]
+public async Task<IActionResult> GetNews()
+{
+    try
+    {
+        var news = await _repository.GetAllAsync();
 
-            var result = news
-                .Select(ToDto)
-                .ToList();
+        var result = news
+            .Select(ToDto)
+            .ToList();
 
-            return Ok(result);
-        }
+        return Ok(result);
+    }
+    catch (Exception ex)
+    {
+        return StatusCode(
+            StatusCodes.Status500InternalServerError,
+            new
+            {
+                message = "Failed to load news.",
+                error = ex.Message,
+                innerError = ex.InnerException?.Message
+            }
+        );
+    }
+}
 
         // =========================================================
         // GET NEWS BY ID - PUBLIC
         // =========================================================
-        [HttpGet("{id:int}")]
-        [AllowAnonymous]
-        public async Task<IActionResult> GetNewsById(int id)
+         [HttpGet("{id:int}")]
+[AllowAnonymous]
+public async Task<IActionResult> GetNewsById(int id)
+{
+    try
+    {
+        var news = await _repository.GetByIdAsync(id);
+
+        if (news == null)
         {
-            var news = await _repository.GetByIdAsync(id);
-
-            if (news == null)
+            return NotFound(new
             {
-                return NotFound(new
-                {
-                    message = "News update not found."
-                });
-            }
-
-            return Ok(ToDto(news));
+                message = "News update not found."
+            });
         }
+
+        return Ok(ToDto(news));
+    }
+    catch (Exception ex)
+    {
+        return StatusCode(
+            StatusCodes.Status500InternalServerError,
+            new
+            {
+                message = "Failed to load the news update.",
+                error = ex.Message,
+                innerError = ex.InnerException?.Message
+            }
+        );
+    }
+}
 
         // =========================================================
         // CREATE NEWS - ADMIN ONLY
