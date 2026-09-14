@@ -32,137 +32,101 @@ namespace drcbackend.Controllers
         }
 
         // =========================================================
-        // GET ALL NEWS - PUBLIC
+        // GET ALL NEWS
         // =========================================================
-     [HttpGet]
-[AllowAnonymous]
- public async Task<IActionResult> GetNews()
-{
-    try
-    {
-        var news = await _repository.GetAllAsync();
 
-        var result = news
-            .OrderByDescending(n => n.PublishedAtUtc)
-            .Select(ToDto)
-            .ToList();
-
-        return Ok(result);
-    }
-    catch (Exception ex)
-    {
-        return StatusCode(
-            StatusCodes.Status500InternalServerError,
-            new
-            {
-                message = "Failed to load news.",
-                error = ex.Message,
-                innerError = ex.InnerException?.Message
-            }
-        );
-    }
-}
-
-        // =========================================================
-        // GET NEWS BY ID - PUBLIC
-        // =========================================================
-         [HttpGet("{id:int}")]
-[AllowAnonymous]
-public async Task<IActionResult> GetNewsById(int id)
-{
-    try
-    {
-        var news = await _repository.GetByIdAsync(id);
-
-        if (news == null)
+        [HttpGet]
+        [AllowAnonymous]
+        public async Task<ActionResult<List<NewsPostDto>>> GetNews()
         {
-            return NotFound(new
-            {
-                message = "News update not found."
-            });
+            var news = await _repository.GetAllAsync();
+
+            var result = news
+                .Select(ToDto)
+                .ToList();
+
+            return Ok(result);
         }
 
-        return Ok(ToDto(news));
-    }
-    catch (Exception ex)
-    {
-        return StatusCode(
-            StatusCodes.Status500InternalServerError,
-            new
+        // =========================================================
+        // GET NEWS BY ID
+        // =========================================================
+
+        [HttpGet("{id:int}")]
+        [AllowAnonymous]
+        public async Task<ActionResult<NewsPostDto>> GetNewsById(int id)
+        {
+            var news = await _repository.GetByIdAsync(id);
+
+            if (news == null)
             {
-                message = "Failed to load the news update.",
-                error = ex.Message,
-                innerError = ex.InnerException?.Message
+                return NotFound(new
+                {
+                    message = "News update not found."
+                });
             }
-        );
-    }
-}
+
+            return Ok(ToDto(news));
+        }
 
         // =========================================================
-        // CREATE NEWS - ADMIN ONLY
+        // CREATE NEWS
         // =========================================================
+
         [HttpPost]
         [AdminOnly]
         [RequestSizeLimit(30 * 1024 * 1024)]
-        public async Task<IActionResult> CreateNews(
+        public async Task<ActionResult<NewsPostDto>> CreateNews(
             [FromForm] string title,
             [FromForm] string content,
             [FromForm] List<IFormFile>? images)
         {
-            try
+            if (string.IsNullOrWhiteSpace(title))
             {
-                // -------------------------------------------------
-                // VALIDATION
-                // -------------------------------------------------
-
-                if (string.IsNullOrWhiteSpace(title))
+                return BadRequest(new
                 {
-                    return BadRequest(new
-                    {
-                        message = "Please enter a title."
-                    });
-                }
+                    message = "Please enter a title."
+                });
+            }
 
-                if (string.IsNullOrWhiteSpace(content))
+            if (string.IsNullOrWhiteSpace(content))
+            {
+                return BadRequest(new
                 {
-                    return BadRequest(new
-                    {
-                        message = "Please enter the update."
-                    });
-                }
+                    message = "Please enter the update."
+                });
+            }
 
-                if (title.Length > 200)
+            if (title.Length > 200)
+            {
+                return BadRequest(new
                 {
-                    return BadRequest(new
-                    {
-                        message = "The title is too long."
-                    });
-                }
+                    message = "The title is too long."
+                });
+            }
 
-                if (content.Length > 10000)
+            if (content.Length > 10000)
+            {
+                return BadRequest(new
                 {
-                    return BadRequest(new
-                    {
-                        message = "The update is too long."
-                    });
-                }
+                    message = "The update is too long."
+                });
+            }
 
-                // -------------------------------------------------
-                // CREATE NEWS POST
-                // -------------------------------------------------
+            var news = new NewsPost
+            {
+                Title = title.Trim(),
+                Content = content.Trim(),
+                PublishedAtUtc = DateTime.UtcNow,
+                CreatedAtUtc = DateTime.UtcNow
+            };
 
-                var news = new NewsPost
-                {
-                    Title = title.Trim(),
-                    Content = content.Trim(),
-                    PublishedAtUtc = DateTime.UtcNow,
-                    CreatedAtUtc = DateTime.UtcNow
-                };
+            // =====================================================
+            // IMAGE UPLOAD
+            // =====================================================
 
-                // -------------------------------------------------
-                // ENSURE UPLOAD DIRECTORY EXISTS
-                // -------------------------------------------------
-
+            if (images != null && images.Count > 0)
+            {
                 var rootPath = _environment.WebRootPath;
 
                 if (string.IsNullOrWhiteSpace(rootPath))
@@ -181,116 +145,84 @@ public async Task<IActionResult> GetNewsById(int id)
 
                 Directory.CreateDirectory(uploadDirectory);
 
-                // -------------------------------------------------
-                // PROCESS IMAGES
-                // -------------------------------------------------
-
-                if (images != null)
+                foreach (var image in images)
                 {
-                    foreach (var image in images)
+                    if (image == null || image.Length == 0)
                     {
-                        if (image == null || image.Length == 0)
+                        continue;
+                    }
+
+                    if (image.Length > MaxFileSize)
+                    {
+                        return BadRequest(new
                         {
-                            continue;
-                        }
-
-                        // Maximum 5 MB per image
-                        if (image.Length > MaxFileSize)
-                        {
-                            return BadRequest(new
-                            {
-                                message =
-                                    $"Image '{image.FileName}' is larger than 5 MB."
-                            });
-                        }
-
-                        // Check file extension
-                        var extension =
-                            Path.GetExtension(image.FileName)
-                                .ToLowerInvariant();
-
-                        if (!AllowedExtensions.Contains(extension))
-                        {
-                            return BadRequest(new
-                            {
-                                message =
-                                    $"Image '{image.FileName}' has an unsupported format. " +
-                                    "Use JPG, JPEG, PNG or WEBP."
-                            });
-                        }
-
-                        // Generate safe unique filename
-                        var fileName =
-                            $"{Guid.NewGuid():N}{extension}";
-
-                        var filePath =
-                            Path.Combine(
-                                uploadDirectory,
-                                fileName
-                            );
-
-                        // Save image
-                        await using var stream =
-                            new FileStream(
-                                filePath,
-                                FileMode.Create
-                            );
-
-                        await image.CopyToAsync(stream);
-
-                        // Add image to news post
-                        news.Images.Add(new NewsImage
-                        {
-                            ImageUrl =
-                                $"/uploads/news/{fileName}",
-
-                            Caption =
-                                Path.GetFileNameWithoutExtension(
-                                    image.FileName
-                                )
+                            message =
+                                $"Image '{image.FileName}' is larger than 5 MB."
                         });
                     }
-                }
 
-                // -------------------------------------------------
-                // SAVE TO DATABASE
-                // -------------------------------------------------
+                    var extension =
+                        Path.GetExtension(image.FileName)
+                            .ToLowerInvariant();
 
-                await _repository.CreateAsync(news);
-
-                // IMPORTANT:
-                // Do NOT return the EF entity directly.
-                // The NewsPost -> Images -> NewsPost relationship
-                // creates a JSON serialization cycle.
-                return Ok(ToDto(news));
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(
-                    StatusCodes.Status500InternalServerError,
-                    new
+                    if (!AllowedExtensions.Contains(extension))
                     {
-                        message =
-                            "An error occurred while creating the news post.",
-
-                        error = ex.Message,
-
-                        innerError =
-                            ex.InnerException?.Message
+                        return BadRequest(new
+                        {
+                            message =
+                                $"Image '{image.FileName}' has an unsupported format. " +
+                                "Use JPG, JPEG, PNG or WEBP."
+                        });
                     }
-                );
+
+                    var fileName =
+                        $"{Guid.NewGuid():N}{extension}";
+
+                    var filePath =
+                        Path.Combine(
+                            uploadDirectory,
+                            fileName
+                        );
+
+                    await using var stream =
+                        new FileStream(
+                            filePath,
+                            FileMode.CreateNew
+                        );
+
+                    await image.CopyToAsync(stream);
+
+                    news.Images.Add(new NewsImage
+                    {
+                        ImageUrl =
+                            $"/uploads/news/{fileName}",
+
+                        Caption =
+                            Path.GetFileNameWithoutExtension(
+                                image.FileName
+                            )
+                    });
+                }
             }
+
+            // =====================================================
+            // SAVE NEWS
+            // =====================================================
+
+            await _repository.CreateAsync(news);
+
+            return Ok(ToDto(news));
         }
 
         // =========================================================
-        // DELETE NEWS - ADMIN ONLY
+        // DELETE NEWS
         // =========================================================
+
         [HttpDelete("{id:int}")]
         [AdminOnly]
         public async Task<IActionResult> DeleteNews(int id)
         {
-            var news =
-                await _repository.GetByIdAsync(id);
+            var news = await _repository.GetByIdAsync(id);
 
             if (news == null)
             {
@@ -299,10 +231,6 @@ public async Task<IActionResult> GetNewsById(int id)
                     message = "News update not found."
                 });
             }
-
-            // -----------------------------------------------------
-            // DELETE ASSOCIATED IMAGE FILES
-            // -----------------------------------------------------
 
             foreach (var image in news.Images)
             {
@@ -341,28 +269,13 @@ public async Task<IActionResult> GetNewsById(int id)
                 }
             }
 
-            // -----------------------------------------------------
-            // DELETE DATABASE RECORD
-            // -----------------------------------------------------
-
             await _repository.DeleteAsync(news);
 
             return NoContent();
         }
 
         // =========================================================
-        // EF ENTITY -> SAFE API DTO
-        // =========================================================
-        //
-        // This prevents:
-        //
-        // NewsPost
-        //    -> Images
-        //       -> NewsPost
-        //          -> Images
-        //             -> NewsPost
-        //
-        // from causing a System.Text.Json object cycle.
+        // DTO
         // =========================================================
 
         private static NewsPostDto ToDto(NewsPost news)
@@ -370,27 +283,17 @@ public async Task<IActionResult> GetNewsById(int id)
             return new NewsPostDto
             {
                 Id = news.Id,
-
                 Title = news.Title,
-
                 Content = news.Content,
-
-                PublishedAtUtc =
-                    news.PublishedAtUtc,
-
-                CreatedAtUtc =
-                    news.CreatedAtUtc,
+                PublishedAtUtc = news.PublishedAtUtc,
+                CreatedAtUtc = news.CreatedAtUtc,
 
                 Images = news.Images
                     .Select(image => new NewsImageDto
                     {
                         Id = image.Id,
-
-                        ImageUrl =
-                            image.ImageUrl,
-
-                        Caption =
-                            image.Caption
+                        ImageUrl = image.ImageUrl,
+                        Caption = image.Caption
                     })
                     .ToList()
             };
