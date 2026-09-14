@@ -135,6 +135,15 @@ using (var scope = app.Services.CreateScope())
     db.Database.Migrate();
 }
 
+// Ensure wwwroot exists before serving static files.
+// This is important for uploaded News images on Azure App Service.
+var webRootPath = Path.Combine(
+    app.Environment.ContentRootPath,
+    "wwwroot"
+);
+
+Directory.CreateDirectory(webRootPath);
+
 app.UseStaticFiles();
 
 app.UseSwagger();
