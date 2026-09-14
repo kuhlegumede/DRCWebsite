@@ -41,7 +41,13 @@ builder.Services.AddScoped<EmailService>();
 builder.Services.AddControllers();
 
 builder.Services
-    .AddAuthentication("AdminScheme")
+    .AddAuthentication(options =>
+    {
+        options.DefaultScheme = "AdminScheme";
+        options.DefaultAuthenticateScheme = "AdminScheme";
+        options.DefaultChallengeScheme = "AdminScheme";
+        options.DefaultForbidScheme = "AdminScheme";
+    })
     .AddScheme<AuthenticationSchemeOptions, AdminAuthenticationHandler>(
         "AdminScheme",
         options => { }
