@@ -13,12 +13,12 @@ namespace drcbackend.Repository
             _context = context;
         }
 
-        public async Task<List<NewsPost>> GetAllAsync()
+        public async Task<IEnumerable<NewsPost>> GetAllAsync()
         {
-            return await _context.NewsPosts
-                .Include(n => n.Images)
-                .OrderByDescending(n => n.PublishedAtUtc)
-                .ToListAsync();
+             return await _context.NewsPosts
+              .Include(n => n.Images)
+              .OrderByDescending(n => n.PublishedAtUtc)
+              .ToListAsync();
         }
 
         public async Task<NewsPost?> GetByIdAsync(int id)
