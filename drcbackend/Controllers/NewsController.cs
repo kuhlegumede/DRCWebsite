@@ -62,7 +62,7 @@ namespace drcbackend.Controllers
 
         // ADMIN ONLY
         // POST: /api/news
-       [HttpPost]
+          [HttpPost]
 [Authorize]
 [RequestSizeLimit(30 * 1024 * 1024)]
 public async Task<IActionResult> CreateNews(
@@ -88,6 +88,22 @@ public async Task<IActionResult> CreateNews(
             });
         }
 
+        if (title.Length > 200)
+        {
+            return BadRequest(new
+            {
+                message = "The title is too long."
+            });
+        }
+
+        if (content.Length > 10000)
+        {
+            return BadRequest(new
+            {
+                message = "The update is too long."
+            });
+        }
+
         var news = new NewsPost
         {
             Title = title.Trim(),
@@ -96,7 +112,7 @@ public async Task<IActionResult> CreateNews(
             CreatedAtUtc = DateTime.UtcNow
         };
 
-        // Only deal with the filesystem if images were actually supplied
+        // Only create upload directory when images exist
         if (images != null && images.Count > 0)
         {
             var webRoot = _environment.WebRootPath;
@@ -138,8 +154,7 @@ public async Task<IActionResult> CreateNews(
                     return BadRequest(new
                     {
                         message =
-                            $"Image '{image.FileName}' has an unsupported format. " +
-                            "Use JPG, JPEG, PNG or WEBP."
+                            $"Image '{image.FileName}' has an unsupported format."
                     });
                 }
 
@@ -173,14 +188,11 @@ public async Task<IActionResult> CreateNews(
     }
     catch (Exception ex)
     {
-        Console.WriteLine("========== NEWS CREATE ERROR ==========");
-        Console.WriteLine(ex.ToString());
-        Console.WriteLine("=======================================");
-
         return StatusCode(500, new
         {
-            message = "Failed to create news article.",
-            error = ex.Message
+            message = "News creation failed.",
+            error = ex.Message,
+            innerError = ex.InnerException?.Message
         });
     }
 }
