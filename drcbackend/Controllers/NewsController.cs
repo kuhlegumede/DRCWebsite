@@ -38,8 +38,7 @@ namespace drcbackend.Controllers
         {
             var news = await _repository.GetAllAsync();
 
-            var result = news.Select(ToDto).ToList();
-
+            var result = news .Select(ToDto) .ToList();
             return Ok(result);
         }
 
@@ -298,4 +297,30 @@ namespace drcbackend.Controllers
             };
         }
     }
+    private static NewsPostDto ToDto(NewsPost news)
+{
+    return new NewsPostDto
+    {
+        Id = news.Id,
+
+        Title = news.Title,
+
+        Content = news.Content,
+
+        PublishedAtUtc = news.PublishedAtUtc,
+
+        CreatedAtUtc = news.CreatedAtUtc,
+
+        Images = news.Images
+            .Select(image => new NewsImageDto
+            {
+                Id = image.Id,
+
+                ImageUrl = image.ImageUrl,
+
+                Caption = image.Caption
+            })
+            .ToList()
+    };
+}
 }
