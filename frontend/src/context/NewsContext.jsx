@@ -24,13 +24,21 @@ export function NewsProvider({ children }) {
 
     try {
       const data = await api.getNews();
-      // Ensure state is always an array
-      setNews(Array.isArray(data) ? data : []);
+
+      setNews(
+        Array.isArray(data)
+          ? data
+          : []
+      );
     } catch (err) {
+      console.error("Failed to load news:", err);
+
       setError(
         err.message ||
           "Couldn't load news updates right now."
       );
+
+      setNews([]);
     } finally {
       setLoading(false);
     }
@@ -41,12 +49,32 @@ export function NewsProvider({ children }) {
   }, [refresh]);
 
   async function addNews(formData) {
-    await api.createNews(formData, token);
+    if (!token) {
+      throw new Error(
+        "You must be signed in as an administrator."
+      );
+    }
+
+    await api.createNews(
+      formData,
+      token
+    );
+
     await refresh();
   }
 
   async function deleteNews(id) {
-    await api.deleteNews(id, token);
+    if (!token) {
+      throw new Error(
+        "You must be signed in as an administrator."
+      );
+    }
+
+    await api.deleteNews(
+      id,
+      token
+    );
+
     await refresh();
   }
 
@@ -67,10 +95,14 @@ export function NewsProvider({ children }) {
 }
 
 export function useNews() {
-  const context = useContext(NewsContext);
+  const context = useContext(
+    NewsContext
+  );
 
   if (!context) {
-    throw new Error("useNews must be used within NewsProvider");
+    throw new Error(
+      "useNews must be used within NewsProvider"
+    );
   }
 
   return context;
