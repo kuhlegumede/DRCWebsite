@@ -1,4 +1,6 @@
-﻿namespace drcbackend.Models
+using System.Text.Json.Serialization;
+
+namespace drcbackend.Models
 {
     public class NewsImage
     {
@@ -10,6 +12,7 @@
 
         public string Caption { get; set; } = string.Empty;
 
+        [JsonIgnore]
         public NewsPost? NewsPost { get; set; }
     }
 }
