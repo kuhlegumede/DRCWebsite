@@ -36,13 +36,31 @@ namespace drcbackend.Controllers
         // =========================================================
      [HttpGet]
 [AllowAnonymous]
-public IActionResult GetNews()
+ public async Task<IActionResult> GetNews()
 {
-    return Ok(new
+    try
     {
-        success = true,
-        message = "News API is working"
-    });
+        var news = await _repository.GetAllAsync();
+
+        var result = news
+            .OrderByDescending(n => n.PublishedAtUtc)
+            .Select(ToDto)
+            .ToList();
+
+        return Ok(result);
+    }
+    catch (Exception ex)
+    {
+        return StatusCode(
+            StatusCodes.Status500InternalServerError,
+            new
+            {
+                message = "Failed to load news.",
+                error = ex.Message,
+                innerError = ex.InnerException?.Message
+            }
+        );
+    }
 }
 
         // =========================================================
