@@ -1,4 +1,5 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
+const rawBaseUrl = import.meta.env.VITE_API_BASE_URL || "";
+const API_BASE_URL = rawBaseUrl.replace(/\/+$/, "");
 
 class ApiError extends Error {
   constructor(message, status) {
@@ -10,20 +11,20 @@ class ApiError extends Error {
 async function request(path, { method = "GET", body, token } = {}) {
   let response;
 
-  // Determine if body is FormData (e.g., file uploads) vs standard JSON
   const isFormData = typeof FormData !== "undefined" && body instanceof FormData;
 
   const headers = {
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 
-  // Do NOT set Content-Type for FormData; browser must set multipart boundary automatically
   if (!isFormData) {
     headers["Content-Type"] = "application/json";
   }
 
+  const cleanPath = path.startsWith("/") ? path : `/${path}`;
+
   try {
-    response = await fetch(`${API_BASE_URL}${path}`, {
+    response = await fetch(`${API_BASE_URL}${cleanPath}`, {
       method,
       headers,
       body: isFormData ? body : body ? JSON.stringify(body) : undefined,
