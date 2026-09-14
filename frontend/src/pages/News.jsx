@@ -1,13 +1,10 @@
-import { useAdmin } from "../context/AdminContext";
-import { useNews } from "../context/NewsContext";
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
-
 export default function NewsCard({ item }) {
   const { isAdmin } = useAdmin();
   const { deleteNews } = useNews();
 
-  // Helper to safely construct absolute image URLs
+  // 1. Guard check to stop undefined errors on initial render
+  if (!item) return null;
+
   function getImageUrl(path) {
     if (!path) return "";
     if (path.startsWith("http://") || path.startsWith("https://")) return path;
@@ -35,13 +32,14 @@ export default function NewsCard({ item }) {
 
   return (
     <article className="overflow-hidden rounded-3xl bg-cream shadow-sm">
-      {item.images?.length > 0 && (
+      {/* 2. Extra safe check for images array */}
+      {item?.images?.length > 0 && (
         <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
           {item.images.map((image) => (
             <img
               key={image.id}
               src={getImageUrl(image.imageUrl)}
-              alt={image.caption || item.title}
+              alt={image.caption || item.title || "News Image"}
               className="h-64 w-full object-cover"
             />
           ))}
@@ -58,13 +56,12 @@ export default function NewsCard({ item }) {
         </h2>
 
         <p className="mt-2 text-sm text-ink/50">
-          {new Date(
-            item.publishedAtUtc
-          ).toLocaleDateString("en-ZA", {
-            day: "numeric",
-            month: "long",
-            year: "numeric",
-          })}
+          {item.publishedAtUtc &&
+            new Date(item.publishedAtUtc).toLocaleDateString("en-ZA", {
+              day: "numeric",
+              month: "long",
+              year: "numeric",
+            })}
         </p>
 
         <div className="mt-5 whitespace-pre-line text-base leading-7 text-ink/75">
