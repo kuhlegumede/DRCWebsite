@@ -1,97 +1,86 @@
-import TriangleTrim from "../components/TriangleTrim";
-import SEO from "../components/SEO";
-import NewsCard from "../components/NewsCard";
-import AddNewsForm from "../components/AddNewsForm";
-
-import { useNews } from "../context/NewsContext";
 import { useAdmin } from "../context/AdminContext";
+import { useNews } from "../context/NewsContext";
 
-export default function News() {
-  const {
-    news,
-    loading,
-    error,
-  } = useNews();
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 
-  const {
-    isAdmin,
-  } = useAdmin();
+export default function NewsCard({ item }) {
+  const { isAdmin } = useAdmin();
+  const { deleteNews } = useNews();
+
+  // Helper to safely construct absolute image URLs
+  function getImageUrl(path) {
+    if (!path) return "";
+    if (path.startsWith("http://") || path.startsWith("https://")) return path;
+    const cleanBase = API_BASE_URL.replace(/\/+$/, "");
+    const cleanPath = path.startsWith("/") ? path : `/${path}`;
+    return `${cleanBase}${cleanPath}`;
+  }
+
+  async function handleDelete() {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this news update?"
+    );
+
+    if (!confirmed) return;
+
+    try {
+      await deleteNews(item.id);
+    } catch (error) {
+      alert(
+        error.message ||
+          "Could not delete this update."
+      );
+    }
+  }
 
   return (
-    <div>
-      <SEO
-        title="News & Updates"
-        description="Read the latest news, activities, celebrations, trips and updates from DRC Primary School in Tsolo, Eastern Cape."
-        path="/news"
-      />
-
-      <section className="bg-ink px-6 pb-20 pt-20 text-cream">
-        <div className="mx-auto max-w-6xl">
-          <p className="text-xs font-bold uppercase tracking-[0.3em] text-sun">
-            DRC Primary School
-          </p>
-
-          <h1 className="mt-4 max-w-3xl text-4xl font-black leading-tight sm:text-6xl">
-            News & Updates
-          </h1>
-
-          <p className="mt-5 max-w-2xl text-lg leading-8 text-cream/70">
-            Discover what has been happening at our school,
-            from learner activities and educational trips to
-            celebrations, meetings and community moments.
-          </p>
+    <article className="overflow-hidden rounded-3xl bg-cream shadow-sm">
+      {item.images?.length > 0 && (
+        <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
+          {item.images.map((image) => (
+            <img
+              key={image.id}
+              src={getImageUrl(image.imageUrl)}
+              alt={image.caption || item.title}
+              className="h-64 w-full object-cover"
+            />
+          ))}
         </div>
-      </section>
+      )}
 
-      <TriangleTrim />
+      <div className="p-6">
+        <p className="text-xs font-bold uppercase tracking-[0.2em] text-gold">
+          School News
+        </p>
 
-      <main className="bg-white px-6 py-16">
-        <div className="mx-auto max-w-6xl">
-          {isAdmin && (
-            <div className="mb-12">
-              <AddNewsForm />
-            </div>
-          )}
+        <h2 className="mt-2 text-2xl font-black text-ink">
+          {item.title}
+        </h2>
 
-          {loading && (
-            <div className="py-16 text-center text-ink/50">
-              Loading school news...
-            </div>
-          )}
+        <p className="mt-2 text-sm text-ink/50">
+          {new Date(
+            item.publishedAtUtc
+          ).toLocaleDateString("en-ZA", {
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+          })}
+        </p>
 
-          {error && (
-            <div className="rounded-2xl bg-red-50 p-5 text-red-700">
-              {error}
-            </div>
-          )}
-
-          {!loading &&
-            !error &&
-            news.length === 0 && (
-              <div className="rounded-3xl bg-cream p-10 text-center">
-                <h2 className="text-2xl font-black text-ink">
-                  No news updates yet
-                </h2>
-
-                <p className="mt-3 text-ink/60">
-                  School news and updates will appear here.
-                </p>
-              </div>
-            )}
-
-          {!loading &&
-            news.length > 0 && (
-              <div className="space-y-10">
-                {news.map((item) => (
-                  <NewsCard
-                    key={item.id}
-                    item={item}
-                  />
-                ))}
-              </div>
-            )}
+        <div className="mt-5 whitespace-pre-line text-base leading-7 text-ink/75">
+          {item.content}
         </div>
-      </main>
-    </div>
+
+        {isAdmin && (
+          <button
+            type="button"
+            onClick={handleDelete}
+            className="mt-6 rounded-full border border-red-200 px-4 py-2 text-sm font-bold text-red-600 transition hover:bg-red-50"
+          >
+            Delete Update
+          </button>
+        )}
+      </div>
+    </article>
   );
 }
