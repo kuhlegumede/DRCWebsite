@@ -4,7 +4,7 @@ namespace drcbackend.Repository
 {
     public interface INewsRepository
     {
-        Task<List<NewsPost>> GetAllAsync();
+        Task<IEnumerable<NewsPost>> GetAllAsync();
 
         Task<NewsPost?> GetByIdAsync(int id);
 
