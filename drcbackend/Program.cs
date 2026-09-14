@@ -5,11 +5,16 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;
 using Microsoft.OpenApi.Models;
+using Microsoft.AspNetCore.Server.IIS;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// DATABASE
+builder.Services.Configure<IISServerOptions>(options =>
+{
+    options.MaxRequestBodySize = 30 * 1024 * 1024;
+});
 
+// DATABASE
 var connectionString =
     builder.Configuration.GetConnectionString("DefaultConnection");
 
@@ -25,21 +30,17 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 );
 
 // REPOSITORIES
-
 builder.Services.AddScoped<IEventRepository, EventRepository>();
 builder.Services.AddScoped<INewsRepository, NewsRepository>();
 
 // SERVICES
-
 builder.Services.AddSingleton<IPasswordHasher, Pbkdf2PasswordHasher>();
 builder.Services.AddSingleton<ITokenService, TokenService>();
 builder.Services.AddSingleton<IAdminAuthService, AdminAuthService>();
 builder.Services.AddScoped<EmailService>();
 
 // CONTROLLERS
-
 builder.Services.AddControllers();
-
 builder.Services
     .AddAuthentication(options =>
     {
@@ -60,7 +61,6 @@ builder.Services.Configure<SmtpSettings>(
 );
 
 // CORS
-
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
@@ -76,9 +76,7 @@ builder.Services.AddCors(options =>
 });
 
 // SWAGGER
-
 builder.Services.AddEndpointsApiExplorer();
-
 builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc(
@@ -137,12 +135,21 @@ using (var scope = app.Services.CreateScope())
 
 // Ensure wwwroot exists before serving static files.
 // This is important for uploaded News images on Azure App Service.
-var webRootPath = Path.Combine(
-    app.Environment.ContentRootPath,
-    "wwwroot"
-);
+var webRootPath = app.Environment.WebRootPath;
+
+if (string.IsNullOrWhiteSpace(webRootPath))
+{
+    webRootPath = Path.Combine(
+        app.Environment.ContentRootPath,
+        "wwwroot"
+    );
+}
 
 Directory.CreateDirectory(webRootPath);
+
+Directory.CreateDirectory(
+    Path.Combine(webRootPath, "uploads", "news")
+);
 
 app.UseStaticFiles();
 
