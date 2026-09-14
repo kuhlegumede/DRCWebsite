@@ -31,18 +31,25 @@ namespace drcbackend.Controllers
             _environment = environment;
         }
 
-        // PUBLIC
+        // =========================================================
+        // GET ALL NEWS - PUBLIC
+        // =========================================================
         [HttpGet]
         [AllowAnonymous]
         public async Task<IActionResult> GetNews()
         {
             var news = await _repository.GetAllAsync();
 
-            var result = news .Select(ToDto) .ToList();
+            var result = news
+                .Select(ToDto)
+                .ToList();
+
             return Ok(result);
         }
 
-        // PUBLIC
+        // =========================================================
+        // GET NEWS BY ID - PUBLIC
+        // =========================================================
         [HttpGet("{id:int}")]
         [AllowAnonymous]
         public async Task<IActionResult> GetNewsById(int id)
@@ -60,7 +67,9 @@ namespace drcbackend.Controllers
             return Ok(ToDto(news));
         }
 
-        // ADMIN ONLY
+        // =========================================================
+        // CREATE NEWS - ADMIN ONLY
+        // =========================================================
         [HttpPost]
         [AdminOnly]
         [RequestSizeLimit(30 * 1024 * 1024)]
@@ -71,6 +80,10 @@ namespace drcbackend.Controllers
         {
             try
             {
+                // -------------------------------------------------
+                // VALIDATION
+                // -------------------------------------------------
+
                 if (string.IsNullOrWhiteSpace(title))
                 {
                     return BadRequest(new
@@ -103,6 +116,10 @@ namespace drcbackend.Controllers
                     });
                 }
 
+                // -------------------------------------------------
+                // CREATE NEWS POST
+                // -------------------------------------------------
+
                 var news = new NewsPost
                 {
                     Title = title.Trim(),
@@ -111,10 +128,13 @@ namespace drcbackend.Controllers
                     CreatedAtUtc = DateTime.UtcNow
                 };
 
-                // Ensure root path falls back safely on Azure App Service
+                // -------------------------------------------------
+                // ENSURE UPLOAD DIRECTORY EXISTS
+                // -------------------------------------------------
+
                 var rootPath = _environment.WebRootPath;
 
-                if (string.IsNullOrEmpty(rootPath))
+                if (string.IsNullOrWhiteSpace(rootPath))
                 {
                     rootPath = Path.Combine(
                         _environment.ContentRootPath,
@@ -130,15 +150,20 @@ namespace drcbackend.Controllers
 
                 Directory.CreateDirectory(uploadDirectory);
 
+                // -------------------------------------------------
+                // PROCESS IMAGES
+                // -------------------------------------------------
+
                 if (images != null)
                 {
                     foreach (var image in images)
                     {
-                        if (image.Length == 0)
+                        if (image == null || image.Length == 0)
                         {
                             continue;
                         }
 
+                        // Maximum 5 MB per image
                         if (image.Length > MaxFileSize)
                         {
                             return BadRequest(new
@@ -148,6 +173,7 @@ namespace drcbackend.Controllers
                             });
                         }
 
+                        // Check file extension
                         var extension =
                             Path.GetExtension(image.FileName)
                                 .ToLowerInvariant();
@@ -157,10 +183,12 @@ namespace drcbackend.Controllers
                             return BadRequest(new
                             {
                                 message =
-                                    $"Image '{image.FileName}' has an unsupported format. Use JPG, JPEG, PNG or WEBP."
+                                    $"Image '{image.FileName}' has an unsupported format. " +
+                                    "Use JPG, JPEG, PNG or WEBP."
                             });
                         }
 
+                        // Generate safe unique filename
                         var fileName =
                             $"{Guid.NewGuid():N}{extension}";
 
@@ -170,6 +198,7 @@ namespace drcbackend.Controllers
                                 fileName
                             );
 
+                        // Save image
                         await using var stream =
                             new FileStream(
                                 filePath,
@@ -178,6 +207,7 @@ namespace drcbackend.Controllers
 
                         await image.CopyToAsync(stream);
 
+                        // Add image to news post
                         news.Images.Add(new NewsImage
                         {
                             ImageUrl =
@@ -191,29 +221,39 @@ namespace drcbackend.Controllers
                     }
                 }
 
+                // -------------------------------------------------
+                // SAVE TO DATABASE
+                // -------------------------------------------------
+
                 await _repository.CreateAsync(news);
 
                 // IMPORTANT:
-                // Do not return the EF entity directly.
-                // Convert it to a DTO to prevent JSON navigation-property cycles.
+                // Do NOT return the EF entity directly.
+                // The NewsPost -> Images -> NewsPost relationship
+                // creates a JSON serialization cycle.
                 return Ok(ToDto(news));
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new
-                {
-                    message =
-                        "An error occurred while creating the news post.",
+                return StatusCode(
+                    StatusCodes.Status500InternalServerError,
+                    new
+                    {
+                        message =
+                            "An error occurred while creating the news post.",
 
-                    error = ex.Message,
+                        error = ex.Message,
 
-                    innerError =
-                        ex.InnerException?.Message
-                });
+                        innerError =
+                            ex.InnerException?.Message
+                    }
+                );
             }
         }
 
-        // ADMIN ONLY
+        // =========================================================
+        // DELETE NEWS - ADMIN ONLY
+        // =========================================================
         [HttpDelete("{id:int}")]
         [AdminOnly]
         public async Task<IActionResult> DeleteNews(int id)
@@ -228,6 +268,10 @@ namespace drcbackend.Controllers
                     message = "News update not found."
                 });
             }
+
+            // -----------------------------------------------------
+            // DELETE ASSOCIATED IMAGE FILES
+            // -----------------------------------------------------
 
             foreach (var image in news.Images)
             {
@@ -244,13 +288,19 @@ namespace drcbackend.Controllers
                             Path.DirectorySeparatorChar
                         );
 
+                var rootPath = _environment.WebRootPath;
+
+                if (string.IsNullOrWhiteSpace(rootPath))
+                {
+                    rootPath = Path.Combine(
+                        _environment.ContentRootPath,
+                        "wwwroot"
+                    );
+                }
+
                 var filePath =
                     Path.Combine(
-                        _environment.WebRootPath
-                            ?? Path.Combine(
-                                _environment.ContentRootPath,
-                                "wwwroot"
-                            ),
+                        rootPath,
                         relativePath
                     );
 
@@ -260,12 +310,30 @@ namespace drcbackend.Controllers
                 }
             }
 
+            // -----------------------------------------------------
+            // DELETE DATABASE RECORD
+            // -----------------------------------------------------
+
             await _repository.DeleteAsync(news);
 
             return NoContent();
         }
 
-        // Converts EF entity -> safe API DTO
+        // =========================================================
+        // EF ENTITY -> SAFE API DTO
+        // =========================================================
+        //
+        // This prevents:
+        //
+        // NewsPost
+        //    -> Images
+        //       -> NewsPost
+        //          -> Images
+        //             -> NewsPost
+        //
+        // from causing a System.Text.Json object cycle.
+        // =========================================================
+
         private static NewsPostDto ToDto(NewsPost news)
         {
             return new NewsPostDto
@@ -297,30 +365,4 @@ namespace drcbackend.Controllers
             };
         }
     }
-    private static NewsPostDto ToDto(NewsPost news)
-{
-    return new NewsPostDto
-    {
-        Id = news.Id,
-
-        Title = news.Title,
-
-        Content = news.Content,
-
-        PublishedAtUtc = news.PublishedAtUtc,
-
-        CreatedAtUtc = news.CreatedAtUtc,
-
-        Images = news.Images
-            .Select(image => new NewsImageDto
-            {
-                Id = image.Id,
-
-                ImageUrl = image.ImageUrl,
-
-                Caption = image.Caption
-            })
-            .ToList()
-    };
-}
 }
