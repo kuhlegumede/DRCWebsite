@@ -1,4 +1,5 @@
 ﻿using drcbackend.Models;
+using drcbackend.Filters;
 using drcbackend.Repository;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -63,7 +64,7 @@ namespace drcbackend.Controllers
         // ADMIN ONLY
         // POST: /api/news
           [HttpPost]
-[Authorize]
+[AdminOnly]
 [RequestSizeLimit(30 * 1024 * 1024)]
 public async Task<IActionResult> CreateNews(
     [FromForm] string title,
@@ -199,7 +200,7 @@ public async Task<IActionResult> CreateNews(
         // ADMIN ONLY
         // DELETE: /api/news/5
         [HttpDelete("{id:int}")]
-        [Authorize]
+        [AdminOnly]
         public async Task<IActionResult> DeleteNews(int id)
         {
             var news = await _repository.GetByIdAsync(id);
