@@ -12,6 +12,6 @@
 
         public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 
-        public ICollection<NewsImage> Images { get; set; } = new List<NewsImage>();
+        public List<NewsImage> Images { get; set; } = new List<NewsImage>();
     }
 }
