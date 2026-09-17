@@ -127,23 +127,23 @@ namespace drcbackend.Controllers
 
             if (images != null && images.Count > 0)
             {
-                var rootPath = _environment.WebRootPath;
+               var rootPath = _environment.WebRootPath;
 
-                if (string.IsNullOrWhiteSpace(rootPath))
-                {
-                    rootPath = Path.Combine(
-                        _environment.ContentRootPath,
-                        "wwwroot"
-                    );
-                }
+if (string.IsNullOrWhiteSpace(rootPath))
+{
+    return StatusCode(500, new
+    {
+        message = "WebRootPath is not configured."
+    });
+}
 
-                var uploadDirectory = Path.Combine(
-                    rootPath,
-                    "uploads",
-                    "news"
-                );
+var uploadDirectory = Path.Combine(
+    rootPath,
+    "uploads",
+    "news"
+);
 
-                Directory.CreateDirectory(uploadDirectory);
+Directory.CreateDirectory(uploadDirectory);
 
                 foreach (var image in images)
                 {
