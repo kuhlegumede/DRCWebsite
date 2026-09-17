@@ -251,6 +251,19 @@ export default function Events() {
   const { isAdmin, ready, logout } = useAdmin();
   const [showPast, setShowPast] = useState(false);
 
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const eventsPerPage = 10;
+
+  const totalPages = Math.ceil(upcoming.length / eventsPerPage);
+
+  const startIndex = (currentPage - 1) * eventsPerPage;
+
+  const currentEvents = upcoming.slice(
+    startIndex,
+    startIndex + eventsPerPage
+  );
+
   return (
     <div>
       <section className="bg-ink text-cream">
@@ -298,7 +311,7 @@ export default function Events() {
 
             {!loading &&
               !error &&
-              upcoming.map((event) => (
+              currentEvents.map((event) => (
                 <EventCard
                   key={event.id}
                   event={event}
@@ -306,6 +319,55 @@ export default function Events() {
                   onDelete={deleteEvent}
                 />
               ))}
+
+            {/* PAGINATION */}
+            {!loading && !error && totalPages > 1 && (
+              <div className="flex items-center justify-center gap-2 pt-6 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setCurrentPage((page) => Math.max(page - 1, 1))
+                  }
+                  disabled={currentPage === 1}
+                  className="rounded-lg border border-ink/10 bg-white px-4 py-2 text-sm font-semibold text-ink hover:bg-cream transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Previous
+                </button>
+
+                <div className="flex items-center gap-1">
+                  {Array.from(
+                    { length: totalPages },
+                    (_, index) => index + 1
+                  ).map((page) => (
+                    <button
+                      key={page}
+                      type="button"
+                      onClick={() => setCurrentPage(page)}
+                      className={
+                        page === currentPage
+                          ? "rounded-lg bg-ink text-cream px-3 py-2 text-sm font-semibold"
+                          : "rounded-lg border border-ink/10 bg-white px-3 py-2 text-sm font-semibold text-ink hover:bg-cream transition-colors"
+                      }
+                    >
+                      {page}
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setCurrentPage((page) =>
+                      Math.min(page + 1, totalPages)
+                    )
+                  }
+                  disabled={currentPage === totalPages}
+                  className="rounded-lg border border-ink/10 bg-white px-4 py-2 text-sm font-semibold text-ink hover:bg-cream transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
+              </div>
+            )}
 
             {!loading && !error && past.length > 0 && (
               <div className="pt-6">
@@ -315,6 +377,7 @@ export default function Events() {
                 >
                   {showPast ? "Hide" : "Show"} past events ({past.length})
                 </button>
+
                 {showPast && (
                   <div className="space-y-5 opacity-70">
                     {past.map((event) => (
