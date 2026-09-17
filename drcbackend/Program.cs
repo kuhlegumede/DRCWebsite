@@ -6,10 +6,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;
 using Microsoft.OpenApi.Models;
 using Microsoft.AspNetCore.Server.IIS;
-using Microsoft.Extensions.FileProviders;
+//using Microsoft.Extensions.FileProviders;
 
 var builder = WebApplication.CreateBuilder(args);
-
+builder.WebHost.UseWebRoot("wwwroot");
 builder.Services.Configure<IISServerOptions>(options =>
 {
     options.MaxRequestBodySize = 30 * 1024 * 1024;
@@ -124,18 +124,17 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 var app = builder.Build();
-var webRootPath = Path.Combine(
-    app.Environment.ContentRootPath,
-    "wwwroot"
-);
 
-Directory.CreateDirectory(webRootPath);
-
-app.UseStaticFiles(new StaticFileOptions
+if (string.IsNullOrWhiteSpace(app.Environment.WebRootPath))
 {
-    FileProvider = new PhysicalFileProvider(webRootPath),
-    RequestPath = ""
-});
+    throw new InvalidOperationException(
+        "WebRootPath is not configured."
+    );
+}
+
+Directory.CreateDirectory(app.Environment.WebRootPath);
+
+app.UseStaticFiles();
 
 app.UseSwagger();
 app.UseSwaggerUI();
