@@ -481,6 +481,19 @@ export default function News() {
     logout,
   } = useAdmin();
 
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const newsPerPage = 6;
+
+  const totalPages = Math.ceil(news.length / newsPerPage);
+
+  const startIndex = (currentPage - 1) * newsPerPage;
+
+  const currentNews = news.slice(
+    startIndex,
+    startIndex + newsPerPage
+  );
+
   return (
     <div>
       {/* HEADER */}
@@ -560,7 +573,7 @@ export default function News() {
             {/* NEWS */}
             {!loading &&
               !error &&
-              news.map((item) => (
+              currentNews.map((item) => (
                 <NewsCard
                   key={item.id}
                   item={item}
@@ -568,6 +581,57 @@ export default function News() {
                   onDelete={deleteNews}
                 />
               ))}
+
+            {/* PAGINATION */}
+            {!loading && !error && totalPages > 1 && (
+              <div className="flex items-center justify-center gap-2 pt-6 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setCurrentPage((page) =>
+                      Math.max(page - 1, 1)
+                    )
+                  }
+                  disabled={currentPage === 1}
+                  className="rounded-lg border border-ink/10 bg-white px-4 py-2 text-sm font-semibold text-ink hover:bg-cream transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Previous
+                </button>
+
+                <div className="flex items-center gap-1">
+                  {Array.from(
+                    { length: totalPages },
+                    (_, index) => index + 1
+                  ).map((page) => (
+                    <button
+                      key={page}
+                      type="button"
+                      onClick={() => setCurrentPage(page)}
+                      className={
+                        page === currentPage
+                          ? "rounded-lg bg-ink text-cream px-3 py-2 text-sm font-semibold"
+                          : "rounded-lg border border-ink/10 bg-white px-3 py-2 text-sm font-semibold text-ink hover:bg-cream transition-colors"
+                      }
+                    >
+                      {page}
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setCurrentPage((page) =>
+                      Math.min(page + 1, totalPages)
+                    )
+                  }
+                  disabled={currentPage === totalPages}
+                  className="rounded-lg border border-ink/10 bg-white px-4 py-2 text-sm font-semibold text-ink hover:bg-cream transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
+              </div>
+            )}
           </div>
 
           {/* ADMIN PANEL */}
