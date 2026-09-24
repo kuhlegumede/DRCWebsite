@@ -1,6 +1,7 @@
 using drcbackend.Filters;
 using drcbackend.Models;
 using drcbackend.Repository;
+using drcbackend.Service;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -11,24 +12,14 @@ namespace drcbackend.Controllers
     public class NewsController : ControllerBase
     {
         private readonly INewsRepository _repository;
-        private readonly IWebHostEnvironment _environment;
-
-        private static readonly string[] AllowedExtensions =
-        {
-            ".jpg",
-            ".jpeg",
-            ".png",
-            ".webp"
-        };
-
-        private const long MaxFileSize = 5 * 1024 * 1024;
+        private readonly IR2StorageService _storageService;
 
         public NewsController(
             INewsRepository repository,
-            IWebHostEnvironment environment)
+            IR2StorageService storageService)
         {
             _repository = repository;
-            _environment = environment;
+            _storageService = storageService;
         }
 
         // =========================================================
@@ -54,9 +45,11 @@ namespace drcbackend.Controllers
 
         [HttpGet("{id:int}")]
         [AllowAnonymous]
-        public async Task<ActionResult<NewsPostDto>> GetNewsById(int id)
+        public async Task<ActionResult<NewsPostDto>> GetNewsById(
+            int id)
         {
-            var news = await _repository.GetByIdAsync(id);
+            var news =
+                await _repository.GetByIdAsync(id);
 
             if (news == null)
             {
@@ -122,29 +115,11 @@ namespace drcbackend.Controllers
             };
 
             // =====================================================
-            // IMAGE UPLOAD
+            // IMAGE UPLOAD TO CLOUDFLARE R2
             // =====================================================
 
             if (images != null && images.Count > 0)
             {
-                var rootPath = _environment.WebRootPath;
-
-if (string.IsNullOrWhiteSpace(rootPath))
-{
-    rootPath = Path.Combine(
-        _environment.ContentRootPath,
-        "wwwroot"
-    );
-}
-
-var uploadDirectory = Path.Combine(
-    rootPath,
-    "uploads",
-    "news"
-);
-
-Directory.CreateDirectory(uploadDirectory);
-
                 foreach (var image in images)
                 {
                     if (image == null || image.Length == 0)
@@ -152,61 +127,36 @@ Directory.CreateDirectory(uploadDirectory);
                         continue;
                     }
 
-                    if (image.Length > MaxFileSize)
+                    try
+                    {
+                        var imageUrl =
+                            await _storageService.UploadAsync(
+                                image,
+                                "news"
+                            );
+
+                        news.Images.Add(new NewsImage
+                        {
+                            ImageUrl = imageUrl,
+
+                            Caption =
+                                Path.GetFileNameWithoutExtension(
+                                    image.FileName
+                                )
+                        });
+                    }
+                    catch (ArgumentException ex)
                     {
                         return BadRequest(new
                         {
-                            message =
-                                $"Image '{image.FileName}' is larger than 5 MB."
+                            message = ex.Message
                         });
                     }
-
-                    var extension =
-                        Path.GetExtension(image.FileName)
-                            .ToLowerInvariant();
-
-                    if (!AllowedExtensions.Contains(extension))
-                    {
-                        return BadRequest(new
-                        {
-                            message =
-                                $"Image '{image.FileName}' has an unsupported format. " +
-                                "Use JPG, JPEG, PNG or WEBP."
-                        });
-                    }
-
-                    var fileName =
-                        $"{Guid.NewGuid():N}{extension}";
-
-                    var filePath =
-                        Path.Combine(
-                            uploadDirectory,
-                            fileName
-                        );
-
-                    await using var stream =
-                        new FileStream(
-                            filePath,
-                            FileMode.CreateNew
-                        );
-
-                    await image.CopyToAsync(stream);
-
-                    news.Images.Add(new NewsImage
-                    {
-                        ImageUrl =
-                            $"/uploads/news/{fileName}",
-
-                        Caption =
-                            Path.GetFileNameWithoutExtension(
-                                image.FileName
-                            )
-                    });
                 }
             }
 
             // =====================================================
-            // SAVE NEWS
+            // SAVE NEWS TO DATABASE
             // =====================================================
 
             await _repository.CreateAsync(news);
@@ -220,9 +170,11 @@ Directory.CreateDirectory(uploadDirectory);
 
         [HttpDelete("{id:int}")]
         [AdminOnly]
-        public async Task<IActionResult> DeleteNews(int id)
+        public async Task<IActionResult> DeleteNews(
+            int id)
         {
-            var news = await _repository.GetByIdAsync(id);
+            var news =
+                await _repository.GetByIdAsync(id);
 
             if (news == null)
             {
@@ -232,6 +184,7 @@ Directory.CreateDirectory(uploadDirectory);
                 });
             }
 
+            // Delete images from Cloudflare R2
             foreach (var image in news.Images)
             {
                 if (string.IsNullOrWhiteSpace(image.ImageUrl))
@@ -239,33 +192,16 @@ Directory.CreateDirectory(uploadDirectory);
                     continue;
                 }
 
-                var relativePath =
-                    image.ImageUrl
-                        .TrimStart('/')
-                        .Replace(
-                            '/',
-                            Path.DirectorySeparatorChar
-                        );
-
-                var rootPath = _environment.WebRootPath;
-
-                if (string.IsNullOrWhiteSpace(rootPath))
+                try
                 {
-                    rootPath = Path.Combine(
-                        _environment.ContentRootPath,
-                        "wwwroot"
+                    await _storageService.DeleteAsync(
+                        image.ImageUrl
                     );
                 }
-
-                var filePath =
-                    Path.Combine(
-                        rootPath,
-                        relativePath
-                    );
-
-                if (System.IO.File.Exists(filePath))
+                catch
                 {
-                    System.IO.File.Delete(filePath);
+                    // Do not prevent database deletion
+                    // if an R2 image is already missing.
                 }
             }
 
@@ -278,22 +214,33 @@ Directory.CreateDirectory(uploadDirectory);
         // DTO
         // =========================================================
 
-        private static NewsPostDto ToDto(NewsPost news)
+        private static NewsPostDto ToDto(
+            NewsPost news)
         {
             return new NewsPostDto
             {
                 Id = news.Id,
+
                 Title = news.Title,
+
                 Content = news.Content,
-                PublishedAtUtc = news.PublishedAtUtc,
-                CreatedAtUtc = news.CreatedAtUtc,
+
+                PublishedAtUtc =
+                    news.PublishedAtUtc,
+
+                CreatedAtUtc =
+                    news.CreatedAtUtc,
 
                 Images = news.Images
                     .Select(image => new NewsImageDto
                     {
                         Id = image.Id,
-                        ImageUrl = image.ImageUrl,
-                        Caption = image.Caption
+
+                        ImageUrl =
+                            image.ImageUrl,
+
+                        Caption =
+                            image.Caption
                     })
                     .ToList()
             };

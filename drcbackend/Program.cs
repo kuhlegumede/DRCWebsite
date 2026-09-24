@@ -13,7 +13,9 @@ builder.Services.Configure<IISServerOptions>(options =>
 {
     options.MaxRequestBodySize = 30 * 1024 * 1024;
 });
-
+builder.Services.Configure<R2Settings>(
+    builder.Configuration.GetSection("CloudflareR2")
+);
 // DATABASE
 var connectionString =
     builder.Configuration.GetConnectionString("DefaultConnection");
@@ -37,6 +39,7 @@ builder.Services.AddScoped<INewsRepository, NewsRepository>();
 builder.Services.AddSingleton<IPasswordHasher, Pbkdf2PasswordHasher>();
 builder.Services.AddSingleton<ITokenService, TokenService>();
 builder.Services.AddSingleton<IAdminAuthService, AdminAuthService>();
+builder.Services.AddSingleton<IR2StorageService, R2StorageService>();
 builder.Services.AddScoped<EmailService>();
 
 // CONTROLLERS
