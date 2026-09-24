@@ -121,15 +121,15 @@ namespace drcbackend.Service
 
             try
             {
-                await using var stream =
-                    file.OpenReadStream();
+                await using var stream = file.OpenReadStream();
 
                 var request = new PutObjectRequest
                 {
                     BucketName = _settings.BucketName,
                     Key = objectKey,
                     InputStream = stream,
-                    ContentType = GetContentType(extension)
+                    ContentType = GetContentType(extension),
+                    UseChunkEncoding = false
                 };
 
                 _logger.LogInformation(
