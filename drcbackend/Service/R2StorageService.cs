@@ -1,4 +1,5 @@
-﻿using Amazon.S3;
+﻿using Amazon.Runtime;
+using Amazon.S3;
 using Amazon.S3.Model;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
@@ -84,7 +85,9 @@ namespace drcbackend.Service
             {
                 ServiceURL = serviceUrl,
                 AuthenticationRegion = "auto",
-                ForcePathStyle = true
+                ForcePathStyle = true,
+                RequestChecksumCalculation = RequestChecksumCalculation.WHEN_REQUIRED,
+                ResponseChecksumValidation = ResponseChecksumValidation.WHEN_REQUIRED
             };
 
             _s3Client = new AmazonS3Client(
@@ -129,7 +132,8 @@ namespace drcbackend.Service
                     Key = objectKey,
                     InputStream = stream,
                     ContentType = GetContentType(extension),
-                    UseChunkEncoding = false
+                    UseChunkEncoding = false,
+                    DisablePayloadSigning = true
                 };
 
                 _logger.LogInformation(
