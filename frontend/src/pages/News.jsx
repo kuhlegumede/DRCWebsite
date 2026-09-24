@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import TriangleTrim from "../components/TriangleTrim";
 import { useNews } from "../context/NewsContext";
 import { useAdmin } from "../context/AdminContext";
@@ -6,6 +6,8 @@ import { useAdmin } from "../context/AdminContext";
 const API_BASE_URL = (
   import.meta.env.VITE_API_BASE_URL || ""
 ).replace(/\/+$/, "");
+
+const NEWS_PER_PAGE = 6;
 
 const emptyForm = {
   title: "",
@@ -207,7 +209,6 @@ function AddNewsForm() {
 
       setForm(emptyForm);
 
-      // Reset the file input
       const fileInput =
         document.getElementById("news-images");
 
@@ -244,7 +245,6 @@ function AddNewsForm() {
         onSubmit={handleSubmit}
         className="space-y-4"
       >
-        {/* TITLE */}
         <div>
           <label
             htmlFor="news-title"
@@ -267,7 +267,6 @@ function AddNewsForm() {
           />
         </div>
 
-        {/* CONTENT */}
         <div>
           <label
             htmlFor="news-content"
@@ -290,7 +289,6 @@ function AddNewsForm() {
           />
         </div>
 
-        {/* IMAGES */}
         <div>
           <label
             htmlFor="news-images"
@@ -320,7 +318,6 @@ function AddNewsForm() {
           </p>
         </div>
 
-        {/* BUTTON / STATUS */}
         <div className="flex items-center gap-4 flex-wrap">
           <button
             type="submit"
@@ -360,6 +357,7 @@ function NewsCard({
 }) {
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState("");
+  const [lightboxImage, setLightboxImage] = useState(null);
 
   async function handleDelete() {
     const confirmed = window.confirm(
@@ -386,37 +384,41 @@ function NewsCard({
 
   return (
     <article className="overflow-hidden rounded-2xl border border-ink/10 bg-white shadow-sm">
-      {/* IMAGES */}
+
+      {/* SMALL IMAGE GRID */}
       {Array.isArray(item.images) &&
         item.images.length > 0 && (
-          <div
-            className={
-              item.images.length === 1
-                ? "grid grid-cols-1"
-                : "grid grid-cols-1 sm:grid-cols-2"
-            }
-          >
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 p-2 bg-ink/5">
             {item.images.map((image) => {
               const imageUrl = getImageUrl(
                 image.imageUrl
               );
 
               return (
-                <img
+                <div
                   key={image.id}
-                  src={imageUrl}
-                  alt={
-                    image.caption ||
-                    item.title ||
-                    "School news"
+                  className="overflow-hidden rounded-lg cursor-pointer ring-0 hover:ring-2 hover:ring-sun/70 hover:shadow-lg hover:shadow-sun/20 transition-all duration-300"
+                  onClick={() =>
+                    setLightboxImage({
+                      url: imageUrl,
+                      alt:
+                        image.caption ||
+                        item.title ||
+                        "School news",
+                    })
                   }
-                  className="h-64 w-full object-cover"
-                  loading="lazy"
-                  onError={(e) => {
-                    e.currentTarget.style.display =
-                      "none";
-                  }}
-                />
+                >
+                  <img
+                    src={imageUrl}
+                    alt={
+                      image.caption ||
+                      item.title ||
+                      "School news"
+                    }
+                    className="h-32 sm:h-36 w-full object-cover hover:scale-105 transition-transform duration-300"
+                    loading="lazy"
+                  />
+                </div>
               );
             })}
           </div>
@@ -468,6 +470,30 @@ function NewsCard({
           </button>
         )}
       </div>
+
+      {/* LIGHTBOX */}
+      {lightboxImage && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+          onClick={() => setLightboxImage(null)}
+        >
+          <button
+            type="button"
+            onClick={() => setLightboxImage(null)}
+            className="absolute top-5 right-5 rounded-full bg-white/10 text-cream w-10 h-10 flex items-center justify-center text-xl font-semibold hover:bg-white/20 transition-colors"
+            aria-label="Close"
+          >
+            ×
+          </button>
+
+          <img
+            src={lightboxImage.url}
+            alt={lightboxImage.alt}
+            className="max-h-[85vh] max-w-full rounded-xl shadow-2xl shadow-sun/30 ring-1 ring-white/10"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </article>
   );
 }
@@ -489,6 +515,41 @@ export default function News() {
     ready,
     logout,
   } = useAdmin();
+
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(news.length / NEWS_PER_PAGE)
+  );
+
+  const startIndex =
+    (currentPage - 1) * NEWS_PER_PAGE;
+
+  const currentNews = news.slice(
+    startIndex,
+    startIndex + NEWS_PER_PAGE
+  );
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
+  function goToPage(page) {
+    if (
+      page >= 1 &&
+      page <= totalPages
+    ) {
+      setCurrentPage(page);
+
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
+    }
+  }
 
   return (
     <div>
@@ -528,16 +589,16 @@ export default function News() {
       {/* MAIN */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-24">
         <div className="grid lg:grid-cols-3 gap-12">
+
           {/* NEWS LIST */}
           <div className="lg:col-span-2 space-y-6 order-2 lg:order-1">
-            {/* LOADING */}
+
             {loading && (
               <div className="rounded-2xl border border-dashed border-ink/20 py-16 text-center text-ink/50">
                 Loading news…
               </div>
             )}
 
-            {/* ERROR */}
             {!loading && error && (
               <div className="rounded-2xl border border-red-200 bg-red-50 py-10 px-6 text-center text-red-700">
                 <p className="font-semibold">
@@ -550,7 +611,6 @@ export default function News() {
               </div>
             )}
 
-            {/* EMPTY */}
             {!loading &&
               !error &&
               news.length === 0 && (
@@ -566,10 +626,10 @@ export default function News() {
                 </div>
               )}
 
-            {/* NEWS */}
+            {/* PAGINATED NEWS */}
             {!loading &&
               !error &&
-              news.map((item) => (
+              currentNews.map((item) => (
                 <NewsCard
                   key={item.id}
                   item={item}
@@ -577,6 +637,81 @@ export default function News() {
                   onDelete={deleteNews}
                 />
               ))}
+
+            {/* PAGINATION */}
+            {!loading &&
+              !error &&
+              news.length > NEWS_PER_PAGE && (
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6">
+
+                  <p className="text-sm text-ink/50">
+                    Showing{" "}
+                    <span className="font-semibold text-ink/70">
+                      {startIndex + 1}
+                    </span>
+                    {" – "}
+                    <span className="font-semibold text-ink/70">
+                      {Math.min(
+                        startIndex + NEWS_PER_PAGE,
+                        news.length
+                      )}
+                    </span>
+                    {" of "}
+                    <span className="font-semibold text-ink/70">
+                      {news.length}
+                    </span>
+                    {" news updates"}
+                  </p>
+
+                  <div className="flex items-center gap-1">
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        goToPage(currentPage - 1)
+                      }
+                      disabled={currentPage === 1}
+                      className="rounded-lg border border-ink/15 px-3 py-2 text-sm font-medium text-ink hover:bg-ink/5 disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      Previous
+                    </button>
+
+                    {Array.from(
+                      { length: totalPages },
+                      (_, index) => index + 1
+                    ).map((page) => (
+                      <button
+                        key={page}
+                        type="button"
+                        onClick={() =>
+                          goToPage(page)
+                        }
+                        className={
+                          page === currentPage
+                            ? "rounded-lg bg-ink text-cream px-3 py-2 text-sm font-semibold"
+                            : "rounded-lg border border-ink/15 px-3 py-2 text-sm font-medium text-ink hover:bg-ink/5"
+                        }
+                      >
+                        {page}
+                      </button>
+                    ))}
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        goToPage(currentPage + 1)
+                      }
+                      disabled={
+                        currentPage === totalPages
+                      }
+                      className="rounded-lg border border-ink/15 px-3 py-2 text-sm font-medium text-ink hover:bg-ink/5 disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      Next
+                    </button>
+
+                  </div>
+                </div>
+              )}
           </div>
 
           {/* ADMIN PANEL */}
