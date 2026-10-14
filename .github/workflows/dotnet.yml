@@ -1,3 +1,4 @@
+
 name: Deploy DRC Primary School Backend
 
 on:
@@ -15,11 +16,9 @@ permissions:
 
 jobs:
   build-and-deploy:
-
     runs-on: ubuntu-latest
 
     steps:
-
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -36,19 +35,6 @@ jobs:
 
       - name: Test
         run: dotnet test "${{ env.PROJECT_PATH }}" --configuration Release --no-build --verbosity normal
-
-      # Install Entity Framework Core CLI
-      - name: Install EF Core CLI
-        run: dotnet tool install --global dotnet-ef --version 8.0.29
-
-      # Apply migrations directly to Azure SQL
-      - name: Update Azure SQL Database
-        env:
-          AZURE_SQL_CONNECTION: ${{ secrets.AZURE_SQL_CONNECTION }}
-        run: |
-          dotnet ef database update \
-            --project "${{ env.PROJECT_PATH }}" \
-            --connection "$AZURE_SQL_CONNECTION"
 
       - name: Publish
         run: dotnet publish "${{ env.PROJECT_PATH }}" --configuration Release --no-build --output ./publish
