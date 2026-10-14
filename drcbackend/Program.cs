@@ -17,19 +17,34 @@ builder.Services.Configure<R2Settings>(
     builder.Configuration.GetSection("CloudflareR2")
 );
 // DATABASE
-var connectionString =
-    builder.Configuration.GetConnectionString("DefaultConnection");
+var dbPath = builder.Configuration["Sqlite:Path"];
 
-if (string.IsNullOrWhiteSpace(connectionString))
+if(string.IsNullOrWhiteSpace(dbPath))
 {
-    throw new InvalidOperationException(
-        "DefaultConnection is missing from appsettings.json."
+    dbPath = Path.Combine(
+        builder.Environment.ContentRootPath,
+        "App_Data",
+        "drc.db");
+
+}
+else if(!Path.IsPathRooted(dbPath))
+{
+    dbPath = Path.Combine(
+        builder.Environment.ContentRootPath,
+        dbPath
     );
+}
+dbPath = Path.GetFullPath(dbPath);
+
+var dbDirectory = Path.GetDirectoryName(dbPath);
+
+if (!String.IsNullOrWhiteSpace(dbDirectory))
+{
+     Directory.CreateDirectory(dbDirectory);
 }
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(connectionString)
-);
+    options.UseSqlite($"Data Source={dbPath}"));
 
 // REPOSITORIES
 builder.Services.AddScoped<IEventRepository, EventRepository>();
@@ -71,7 +86,7 @@ builder.Services.AddCors(options =>
         policy
             .WithOrigins(
                 "https://drcprimaryschool.co.za",
-                "https://www.drcprimaryschool.co.za"
+                "https://www.drcprimaryschool.co.za"     
             )
             .AllowAnyHeader()
             .AllowAnyMethod();
@@ -126,6 +141,14 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider
+        .GetRequiredService<ApplicationDbContext>();
+
+    db.Database.Migrate();
+}
 
 var webRootPath = Path.Combine(
     app.Environment.ContentRootPath,
